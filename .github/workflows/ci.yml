@@ -1,0 +1,60 @@
+name: "Create release"
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    name: "Upload release asset"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout code"
+        uses: "actions/checkout@v4"
+
+      - name: "Install zsh"
+        run: "sudo apt-get install -y zsh"
+
+      - name: "Install Just"
+        uses: "extractions/setup-just@v2"
+
+      - name: "Install SDK"
+        uses: "idleberg/setup-playdate-sdk@v3.0.0"
+
+      - name: "Build"
+        run: |
+          just build zip
+
+      - name: "Build beta"
+        run: |
+          git reset --hard
+          just clean beta
+
+      - name: "Build Catalog"
+        run: |
+          git reset --hard
+          just clean catalog
+
+      - name: "Build demo"
+        run: |
+          git reset --hard
+          just clean demo
+
+      - name: "Build Itch"
+        run: |
+          git reset --hard
+          just clean itch
+
+      - name: "Upload artifacts"
+        uses: "actions/upload-artifact@v4"
+        with:
+          name: "builds"
+          path: "releases/*/*.zip"
+
+      - name: "Create release"
+        uses: "softprops/action-gh-release@v2"
+        with:
+          draft: false
+          prerelease: false
+          files: "releases/*/*.zip"

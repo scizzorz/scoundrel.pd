@@ -1,0 +1,6 @@
+*.pdx
+*.png
+*.wav
+*.zip
+releases
+sdk

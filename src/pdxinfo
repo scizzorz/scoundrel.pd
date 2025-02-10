@@ -1,0 +1,7 @@
+name=Scoundrel
+author=John Weachock
+description=A quick solitaire designed by Zach Gage and Kurt Bieg
+bundleID=com.scizzorz.scoundrel
+version=0.0.0
+buildNumber=0
+imagePath=launcher

@@ -1,0 +1,149 @@
+#!/bin/zsh
+# vim: set ft=sh:
+
+INFO="#"
+WARNING="!"
+GOOD="✓"
+BAD="✗"
+
+SED_INPLACE="-i"
+
+if [[ "$(uname)" == "Darwin" ]]; then
+  SED_INPLACE=("-i" "")
+fi
+
+if [[ -t 1 ]]; then
+  INFO="\033[33m${INFO}\033[0m"
+  WARNING="\033[33m${WARNING}\033[0m"
+  GOOD="\033[32m${GOOD}\033[0m"
+  BAD="\033[31m${BAD}\033[0m"
+fi
+
+MANIFEST="src/pdxinfo"
+TARGET="scoundrel"
+LEVEL="$1"
+
+# find current data
+cur_code=$(cat "${MANIFEST}" | grep buildNumber | sed -e 's!buildNumber=\([0-9][0-9]*\)$!\1!')
+cur_name=$(cat "${MANIFEST}" | grep version | sed -e 's!^version=\(.*\)$!\1!')
+
+>&2 echo "${INFO} Operating on ${cur_name}-${cur_code}"
+
+if ! just clean; then
+  >&2 echo "${BAD} Failed to clean old build artifacts"
+  >&2 echo "${INFO} It's possible that a rebuild script is running"
+  exit 1
+fi
+
+if [[ "${cur_name}" =~ "^([0-9]+)\.([0-9]+)$" ]]; then
+  major=${match[1]}
+  minor=${match[2]}
+  patch=0
+elif [[ "${cur_name}" =~ "^([0-9]+)\.([0-9]+)\.([0-9]+)$" ]]; then
+  major=${match[1]}
+  minor=${match[2]}
+  patch=${match[3]}
+else
+  >&2 echo "${BAD} Invalid current name: ${cur_name}"
+  exit 1
+fi
+
+# increment version
+case "${LEVEL}" in
+  "major")
+    major=$((major + 1))
+    minor=0
+    patch=0
+    suffix=""
+    style="tag"
+    ;;
+  "minor")
+    minor=$((minor + 1))
+    patch=0
+    suffix=""
+    style="tag"
+    ;;
+  "patch")
+    patch=$((patch + 1))
+    suffix=""
+    style="tag"
+    ;;
+  "catalog")
+    suffix="c"
+    style="branch"
+    ;;
+  "itch")
+    suffix="i"
+    style="branch"
+    ;;
+  "demo")
+    suffix="d"
+    style="branch"
+    ;;
+  "beta")
+    suffix="b"
+    style="branch"
+    ;;
+  *)
+    >&2 echo "${BAD} Please select a tag level: major, minor, patch, catalog, itch, demo, beta"
+    exit 1
+    ;;
+esac
+
+modified="$(git diff --name-only 2>/dev/null | wc -l)"
+staged="$(git diff --name-only --cached 2>/dev/null | wc -l)"
+
+if [[ "${style}" == "tag" ]]; then
+  if [[ "${modified}" -gt "0" ]] || [[ "${staged}" -gt "0" ]]; then
+    >&2 echo "${BAD} Please commit your changes before version bumping"
+    exit 1
+  fi
+
+  new_code=$((cur_code + 1))
+else
+  if [[ "${modified}" -gt "0" ]] || [[ "${staged}" -eq "0" ]]; then
+    >&2 echo "${BAD} Please stage your changes before releasing"
+    exit 1
+  fi
+  new_code="${cur_code}"
+fi
+
+new_name="${major}.${minor}.${patch}${suffix}"
+
+# update manifest
+sed -e "s/buildNumber=${cur_code}/buildNumber=${new_code}/"\
+    -e "s/version=${cur_name}/version=${new_name}/"\
+    "${=SED_INPLACE}" "${MANIFEST}"
+
+>&2 echo "${INFO} Building ${new_name}-${new_code}"
+
+# build packages
+mkdir -p "releases/${new_code}/"
+if ! just build zip; then
+  >&2 echo "${BAD} Failed to build; restoring ${MANIFEST}"
+  git checkout "${MANIFEST}"
+  exit 1
+fi
+
+release_pdx="releases/${new_code}/${TARGET}-${new_name}.pdx"
+release_zip="releases/${new_code}/${TARGET}-${new_name}.pdx.zip"
+cp -rf "${TARGET}.pdx" "${release_pdx}"
+cp "${TARGET}.pdx.zip" "${release_zip}"
+
+# stage, commit, tag
+>&2 echo "${INFO} Bumped from ${cur_name}-${cur_code} -> ${new_name}-${new_code}"
+
+if [[ "${style}" == "tag" ]]; then
+  >&2 echo "${INFO} Releasing ${new_name}"
+  git add "${MANIFEST}"
+  git commit -m "Bump from ${cur_name}-${cur_code} -> ${new_name}-${new_code}"
+  git tag -a "v${new_name}" -m "Release ${new_name}-${new_code}"
+  git tag -a "r${new_code}" -m "Release ${new_name}-${new_code}"
+  >&2 echo "${GOOD} Successfully tagged"
+fi
+
+git log -1
+
+>&2 echo "${GOOD} Artifacts available:"
+>&2 echo "    ${release_pdx}"
+>&2 echo "    ${release_zip}"

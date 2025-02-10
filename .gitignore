@@ -1,0 +1,10 @@
+*.pdx
+*.pdx.zip
+*.dylib
+*.elf
+.DS_store
+
+simdisk
+hwdisk
+sdk
+releases

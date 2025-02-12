@@ -31,6 +31,10 @@ Title = State {
     Five:draw("a", 24, self.playY)
     Five:draw(SAVE.win .. "h", 1, self.statY)
     Five:drawRight(SAVE.lose .. "m", 49, self.statY)
+
+    -- this is in :draw() because this is the only place we can really capture
+    -- the last bits of the frame
+    Precache:process()
   end,
 
   AButtonDown = function(self)

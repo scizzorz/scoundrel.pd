@@ -26,7 +26,9 @@ Transition = State {
     self.frame += 1
 
     if self.fill == self.tfill  then
-      replaceState(self.toState, t_unpack(self.args))
+      if Precache:count() == 0 then
+        replaceState(self.toState, t_unpack(self.args))
+      end
     else
       self.fill = lerp(self.fill, self.tfill, 0.3, 0.03)
     end
@@ -37,7 +39,15 @@ Transition = State {
     self.fromImage:draw(0, 0)
     gfx.setStencilPattern(self.fill)
     gfx.setColor(white)
-    gfx.fillRect(0, 0, 400, 240)
+    gfx.fillRect(0, 0, 50, 30)
     gfx.clearStencil()
+
+    local count = Precache:count()
+    if count > 0 then
+      local percent = (1 - count / Precache:size())
+      gfx.setColor(black)
+      gfx.fillRect(0, 29, 50 * percent, 1)
+      Precache:process()
+    end
   end,
 }

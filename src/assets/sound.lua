@@ -10,7 +10,7 @@ function Sound(path)
   local ret = SOUND_CACHE[path]
   if not ret then
     if SHOW_CACHE_MISSES then
-      debug("getSound cache miss: %s", path)
+      debug("Sound cache miss: %s", path)
     end
     local sound = snd.sampleplayer.new(path)
     assert(sound, "failed to load sound at " .. path)

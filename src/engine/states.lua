@@ -7,7 +7,7 @@ local nop <const> = function() end
 local stateChangeQueue <const> = {}
 local states <const> = {}
 
-local state_metatable <const> = {
+local stateMetatable <const> = {
   __call = function(class, ...)
     local instance = setmetatable({}, class)
     return instance, instance:init(...)
@@ -64,7 +64,7 @@ function State(namespace)
   -- in it because `class` is the metatable of all instances.
   class.__index = class
 
-  return setmetatable(class, state_metatable)
+  return setmetatable(class, stateMetatable)
 end
 
 -- private functions that actually manipulate the stack

@@ -35,6 +35,8 @@ Game = Class {
     self.room = {}
   end,
 
+  -- win and loss conditions are not exclusive! the loss condition should be
+  -- checked before the win condition in order to avoid false victories.
   win = function(self)
     return #self.deck == 0 and self:count() == 0
   end,
